@@ -6,11 +6,7 @@ const app = express();
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// ---- Settings (change these if you want) ----
-const PORT = 3000;
-const ADMIN_PIN = '1234';
-// Separate database so your UniversityDB test data stays untouched
-const MONGO_URL = 'mongodb://127.0.0.1:27017/StudentRecordsDB';
+
 
 mongoose
   .connect(MONGO_URL)
