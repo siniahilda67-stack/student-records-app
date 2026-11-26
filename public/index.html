@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Student Records</title>
+<style>
+  :root {
+    --ink: #1c2b25;
+    --muted: #5f6f68;
+    --line: #d5ddd8;
+    --paper: #f6f8f5;
+    --card: #ffffff;
+    --green: #1f7a4d;
+    --green-dark: #165c3a;
+    --red: #b3382c;
+    --amber: #a8700b;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Segoe UI", system-ui, sans-serif;
+    color: var(--ink);
+    background: var(--paper);
+    line-height: 1.5;
+  }
+  header { background: var(--green-dark); color: #fff; padding: 22px 16px 0; }
+  .wrap { max-width: 920px; margin: 0 auto; }
+  h1 { margin: 0 0 14px; font-size: 1.6rem; }
+  nav { display: flex; gap: 6px; }
+  nav button {
+    border: 0; padding: 10px 18px; cursor: pointer; font-size: 1rem;
+    background: transparent; color: #cfe6d9; border-radius: 6px 6px 0 0;
+  }
+  nav button.active { background: var(--paper); color: var(--ink); font-weight: 600; }
+  main { padding: 22px 16px 60px; }
+  section[hidden], div[hidden] { display: none; }
+  h2 { margin: 0 0 10px; font-size: 1.2rem; }
+  .panel { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 18px; margin-bottom: 20px; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+  input, textarea, select {
+    font: inherit; padding: 10px 12px; border: 1px solid var(--line);
+    border-radius: 6px; background: #fff; flex: 1 1 200px; min-width: 0;
+  }
+  textarea { width: 100%; flex-basis: 100%; min-height: 70px; resize: vertical; }
+  input:focus, textarea:focus, select:focus, button:focus-visible { outline: 2px solid var(--green); outline-offset: 1px; }
+  button.btn {
+    font: inherit; padding: 10px 16px; border-radius: 6px; cursor: pointer;
+    border: 1px solid var(--green); background: var(--green); color: #fff;
+  }
+  button.btn:hover { background: var(--green-dark); }
+  button.btn.ghost { background: #fff; color: var(--green-dark); }
+  button.btn.ghost:hover { background: #eef5f0; }
+  button.btn.danger { background: #fff; color: var(--red); border-color: var(--red); }
+  button.btn.danger:hover { background: #fbeeec; }
+  button.small { padding: 5px 10px; font-size: .88rem; }
+  .who h3 { margin: 0 0 4px; font-size: 1.25rem; }
+  .who p { margin: 0; color: var(--muted); }
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; font-size: .92rem; }
+  td.actions { white-space: nowrap; }
+  td.actions button { margin-right: 4px; }
+  .badge { display: inline-block; padding: 2px 10px; border-radius: 99px; font-size: .85rem; border: 1px solid; }
+  .Pending { color: var(--amber); border-color: var(--amber); }
+  .In-Progress { color: #1c5d99; border-color: #1c5d99; }
+  .Resolved { color: var(--green); border-color: var(--green); }
+  .empty { color: var(--muted); padding: 8px 0; }
+  .detail { color: var(--muted); font-size: .92rem; }
+  #toast {
+    position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%);
+    background: var(--ink); color: #fff; padding: 10px 18px; border-radius: 6px;
+    opacity: 0; pointer-events: none; transition: opacity .2s; max-width: 90vw;
+  }
+  #toast.show { opacity: 1; }
+  #toast.error { background: var(--red); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <h1>Student Records</h1>
+    <nav>
+      <button id="tabStudent" class="active" onclick="showTab('student')">I am a student</button>
+      <button id="tabAdmin" onclick="showTab('admin')">Administration</button>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <!-- STUDENT VIEW -->
+  <section id="studentView">
+    <div class="panel">
+      <h2>Find your record</h2>
+      <div class="row">
+        <input id="regInput" placeholder="Registration number, e.g. 25/BIT/BU/R/0014" onkeydown="if(event.key==='Enter')findStudent()">
+        <button class="btn" onclick="findStudent()">Find my record</button>
+      </div>
+      <div id="studentCard" class="who"></div>
+    </div>
+
+    <div id="complaintArea" hidden>
+      <div class="panel">
+        <h2 id="complaintTitle">Report a problem</h2>
+        <div class="row">
+          <input id="issueInput" placeholder="What is the problem? e.g. Fee payment not showing">
+        </div>
+        <div class="row">
+          <textarea id="detailsInput" placeholder="Give more details (dates, receipt numbers, course units)"></textarea>
+        </div>
+        <div class="row">
+          <button class="btn" id="complaintBtn" onclick="saveComplaint()">Send complaint</button>
+          <button class="btn ghost" onclick="clearComplaintForm()">Clear</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>My complaints</h2>
+        <div id="myComplaints"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ADMIN VIEW -->
+  <section id="adminView" hidden>
+    <div class="panel" id="lockPanel">
+      <h2>Administration login</h2>
+      <div class="row">
+        <input id="pinInput" type="password" placeholder="Admin PIN" onkeydown="if(event.key==='Enter')unlock()">
+        <button class="btn" onclick="unlock()">Unlock</button>
+      </div>
+    </div>
+
+    <div id="adminArea" hidden>
+      <div class="panel">
+        <h2 id="studentFormTitle">Add a student</h2>
+        <div class="row">
+          <input id="nameInput" placeholder="Name">
+          <input id="regNoInput" placeholder="Registration number">
+          <input id="courseInput" placeholder="Course">
+        </div>
+        <div class="row">
+          <button class="btn" id="studentBtn" onclick="saveStudent()">Add student</button>
+          <button class="btn ghost" onclick="clearStudentForm()">Clear</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Students</h2>
+        <div class="table-wrap" id="studentTable"></div>
+      </div>
+
+      <div class="panel">
+        <h2>Complaints from students</h2>
+        <div class="table-wrap" id="complaintTable"></div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<div id="toast"></div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+let adminPin = '';
+let currentReg = '';
+let editingComplaintId = null;
+let editingStudentId = null;
+let myComplaints = [];
+let allStudents = [];
+
+async function api(url, method = 'GET', body, pin) {
+  const headers = { 'Content-Type': 'application/json' };
+  if (pin) headers['x-admin-pin'] = pin;
+  const res = await fetch(url, { method, headers, body: body ? JSON.stringify(body) : undefined });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || 'Something went wrong');
+  return data;
+}
+
+let toastTimer;
+function toast(message, isError = false) {
+  const t = $('toast');
+  t.textContent = message;
+  t.className = 'show' + (isError ? ' error' : '');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => (t.className = ''), 2800);
+}
+
+function showTab(tab) {
+  const student = tab === 'student';
+  $('studentView').hidden = !student;
+  $('adminView').hidden = student;
+  $('tabStudent').classList.toggle('active', student);
+  $('tabAdmin').classList.toggle('active', !student);
+}
+
+/* ---------- STUDENT SIDE ---------- */
+async function findStudent() {
+  const reg = $('regInput').value.trim();
+  if (!reg) return toast('Enter your registration number', true);
+  try {
+    const s = await api('/api/student?regNo=' + encodeURIComponent(reg));
+    currentReg = s.regNo;
+    $('studentCard').innerHTML = `<h3>${esc(s.name)}</h3><p>Reg No: ${esc(s.regNo)}</p><p>Course: ${esc(s.course)}</p>`;
+    $('complaintArea').hidden = false;
+    clearComplaintForm();
+    loadMyComplaints();
+  } catch (e) {
+    currentReg = '';
+    $('studentCard').innerHTML = '';
+    $('complaintArea').hidden = true;
+    toast(e.message, true);
+  }
+}
+
+async function loadMyComplaints() {
+  try {
+    myComplaints = await api('/api/complaints?regNo=' + encodeURIComponent(currentReg));
+    if (!myComplaints.length) {
+      $('myComplaints').innerHTML = '<p class="empty">You have not sent any complaints yet.</p>';
+      return;
+    }
+    $('myComplaints').innerHTML = `<div class="table-wrap"><table>
+      <tr><th>Problem</th><th>Status</th><th>Date</th><th></th></tr>
+      ${myComplaints.map((c) => `
+        <tr>
+          <td>${esc(c.issue)}<div class="detail">${esc(c.details)}</div></td>
+          <td><span class="badge ${c.status.replace(' ', '-')}">${esc(c.status)}</span></td>
+          <td>${new Date(c.createdAt).toLocaleDateString()}</td>
+          <td class="actions">${c.status === 'Pending'
+            ? `<button class="btn ghost small" onclick="editComplaint('${c._id}')">Edit</button>
+               <button class="btn danger small" onclick="deleteMyComplaint('${c._id}')">Delete</button>`
+            : ''}</td>
+        </tr>`).join('')}
+    </table></div>`;
+  } catch (e) {
+    toast(e.message, true);
+  }
+}
+
+async function saveComplaint() {
+  const issue = $('issueInput').value.trim();
+  const details = $('detailsInput').value.trim();
+  if (!issue) return toast('Say what the problem is', true);
+  try {
+    if (editingComplaintId) {
+      await api('/api/complaints/' + editingComplaintId, 'PUT', { regNo: currentReg, issue, details });
+      toast('Complaint updated');
+    } else {
+      await api('/api/complaints', 'POST', { regNo: currentReg, issue, details });
+      toast('Complaint sent');
+    }
+    clearComplaintForm();
+    loadMyComplaints();
+  } catch (e) {
+    toast(e.message, true);
+  }
+}
+
+function editComplaint(id) {
+  const c = myComplaints.find((x) => x._id === id);
+  if (!c) return;
+  editingComplaintId = id;
+  $('issueInput').value = c.issue;
+  $('detailsInput').value = c.details;
+  $('complaintTitle').textContent = 'Edit your complaint';
+  $('complaintBtn').textContent = 'Save changes';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+async function deleteMyComplaint(id) {
+  if (!confirm('Delete this complaint?')) return;
+  try {
+    await api(`/api/complaints/${id}?regNo=${encodeURIComponent(currentReg)}`, 'DELETE');
+    toast('Complaint deleted');
+    loadMyComplaints();
+  } catch (e) {
+    toast(e.message, true);
+  }
+}
+
+function clearComplaintForm() {
+  editingComplaintId = null;
+  $('issueInput').value = '';
+  $('detailsInput').value = '';
+  $('complaintTitle').textContent = 'Report a problem';
+  $('complaintBtn').textContent = 'Send complaint';
+}
+
+/* ---------- ADMIN SIDE ---------- */
+async function unlock() {
+  const pin = $('pinInput').value;
+  try {
+    await api('/api/students', 'GET', null, pin);
+    adminPin = pin;
+    $('lockPanel').hidden = true;
+    $('adminArea').hidden = false;
+    loadStudents();
+    loadAllComplaints();
+  } catch (e) {
+    toast(e.message, true);
+  }
+}
+
+async function loadStudents() {
+  try {
+    allStudents = await api('/api/students', 'GET', null, adminPin);
+    if (!allStudents.length) {
+      $('studentTable').innerHTML = '<p class="empty">No students yet. Add the first one above.</p>';
+      return;
+    }
+    $('studentTable').innerHTML = `<table>
+      <tr><th>Name</th><th>Reg No</th><th>Course</th><th>Actions</th></tr>
+      ${allStudents.map((s) => `
+        <tr>
+          <td>${esc(s.name)}</td>
+          <td>${esc(s.regNo)}</td>
+          <td>${esc(s.course)}</td>
+          <td class="actions">
+            <button class="btn ghost small" onclick="editStudent('${s._id}')">Edit</button>
+            <button class="btn danger small" onclick="deleteStudent('${s._id}')">Delete</button>
+          </td>
+        </tr>`).join('')}
+    </table>`;
+  } catch (e) {
+    toast(e.message, true);
+  }
+}
+
+async function saveStudent() {
+  const body = {
+    name: $('nameInput').value.trim(),
+    regNo: $('regNoInput').value.trim(),
+    course: $('courseInput').value.trim(),
+  };
+  if (!body.name || !body.regNo || !body.course) return toast('Fill in name, registration number and course', true);
+  try {
+    if (editingStudentId) {
+      await api('/api/students/' + editingStudentId, 'PUT', body, adminPin);
+      toast('Student updated');
+    } else {
+      await api('/api/students', 'POST', body, adminPin);
+      toast('Student added');
+    }
+    clearStudentForm();
+    loadStudents();
+  } catch (e) {
+    toast(e.message, true);
+  }
+}
+
+function editStudent(id) {
+  const s = allStudents.find((x) => x._id === id);
+  if (!s) return;
+  editingStudentId = id;
+  $('nameInput').value = s.name;
+  $('regNoInput').value = s.regNo;
+  $('courseInput').value = s.course;
+  $('studentFormTitle').textContent = 'Edit student';
+  $('studentBtn').textContent = 'Save changes';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+async function deleteStudent(id) {
+  if (!confirm('Delete this student record?')) return;
+  try {
+    await api('/api/students/' + id, 'DELETE', null, adminPin);
+    toast('Student deleted');
+    loadStudents();
+  } catch (e) {
+    toast(e.message, true);
+  }
+}
+
+function clearStudentForm() {
+  editingStudentId = null;
+  $('nameInput').value = '';
+  $('regNoInput').value = '';
+  $('courseInput').value = '';
+  $('studentFormTitle').textContent = 'Add a student';
+  $('studentBtn').textContent = 'Add student';
+}
+
+async function loadAllComplaints() {
+  try {
+    const list = await api('/api/complaints/all', 'GET', null, adminPin);
+    if (!list.length) {
+      $('complaintTable').innerHTML = '<p class="empty">No complaints yet.</p>';
+      return;
+    }
+    $('complaintTable').innerHTML = `<table>
+      <tr><th>Reg No</th><th>Problem</th><th>Status</th><th></th></tr>
+      ${list.map((c) => `
+        <tr>
+          <td>${esc(c.regNo)}</td>
+          <td>${esc(c.issue)}<div class="detail">${esc(c.details)}</div></td>
+          <td>
+            <select onchange="setStatus('${c._id}', this.value)">
+              ${['Pending', 'In Progress', 'Resolved'].map((s) => `<option ${s === c.status ? 'selected' : ''}>${s}</option>`).join('')}
+            </select>
+          </td>
+          <td class="actions"><button class="btn danger small" onclick="deleteAnyComplaint('${c._id}')">Delete</button></td>
+        </tr>`).join('')}
+    </table>`;
+  } catch (e) {
+    toast(e.message, true);
+  }
+}
+
+async function setStatus(id, status) {
+  try {
+    await api(`/api/complaints/${id}/status`, 'PUT', { status }, adminPin);
+    toast('Status updated to ' + status);
+  } catch (e) {
+    toast(e.message, true);
+  }
+}
+
+async function deleteAnyComplaint(id) {
+  if (!confirm('Delete this complaint?')) return;
+  try {
+    await api('/api/complaints/' + id, 'DELETE', null, adminPin);
+    toast('Complaint deleted');
+    loadAllComplaints();
+  } catch (e) {
+    toast(e.message, true);
+  }
+}
+</script>
+</body>
+</html>
