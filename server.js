@@ -184,7 +184,7 @@ app.get('/api/complaints/all', adminOnly, async (req, res) => {
     sendError(res, err);
   }
 });
-]                                                                             
+                                                                            
 // UPDATE complaint status
 app.put('/api/complaints/:id/status', adminOnly, async (req, res) => {
   try {
