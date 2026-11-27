@@ -1,12 +1,16 @@
+  const express = require('express');
+const mongoose = require('mongoose');
+const path = require('path');
 
-const PORT = process.env.PORT || 3000;
-const ADMIN_PIN = process.env.ADMIN_PIN || '1234';
-const MONGO_URL = process.env.MONGO_URL || 'mongodb://127.0.0.1:27017/StudentRecordsDB';
 const app = express();
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-
+// ---- Settings (change these if you want) ----
+const PORT = process.env.PORT || 3000;
+const ADMIN_PIN = process.env.ADMIN_PIN || '1234';
+// Separate database so your UniversityDB test data stays untouched
+const MONGO_URL = process.env.MONGO_URL || 'mongodb://127.0.0.1:27017/StudentRecordsDB';
 
 mongoose
   .connect(MONGO_URL)
@@ -172,7 +176,7 @@ app.delete('/api/students/:id', adminOnly, async (req, res) => {
     await Student.findByIdAndDelete(req.params.id);
     res.json({ ok: true });
   } catch (err) {
-      sendError(res, err);
+    sendError(res, err);
   }
 });
 
@@ -184,7 +188,7 @@ app.get('/api/complaints/all', adminOnly, async (req, res) => {
     sendError(res, err);
   }
 });
-                                                                            
+
 // UPDATE complaint status
 app.put('/api/complaints/:id/status', adminOnly, async (req, res) => {
   try {
@@ -199,5 +203,5 @@ app.put('/api/complaints/:id/status', adminOnly, async (req, res) => {
     sendError(res, err);
   }
 });
-            
+
 app.listen(PORT, () => console.log(`Open http://localhost:${PORT}`));
